@@ -1,0 +1,378 @@
+%% Main Script - Credit Default Prediction with Enhanced Metrics
+clear; clc; close all;
+rng(42); % Set seed to 42 (or any other fixed number)
+
+% Read data
+dataTable = readtable('C:\Users\arsal\OneDrive\Neural computing GW\default of credit card clients.xls');
+
+% Extract features and target
+X = table2array(dataTable(:, 1:end-1));  
+y = logical(table2array(dataTable(:, end)));  % Convert to logical
+
+% After reading data
+assert(isequal(unique(y), [false; true]), 'Target must be binary logical')
+
+% Data cleaning
+valid_rows = ~any(isnan(X), 2) & ~isnan(y);
+X = X(valid_rows, :);
+y = y(valid_rows);
+
+% Class distribution
+fprintf('Class distribution: %.2f%% ones\n', mean(y)*100);
+
+% Normalize features
+X = normalize(X, 'zscore');
+
+% Class weights (now using logical y)
+num_class1 = sum(y);           % Count of TRUE (defaults)
+num_class0 = sum(~y);          % Count of FALSE (non-defaults)
+total_samples = num_class0 + num_class1;
+class_weights = [total_samples/(2*num_class0), total_samples/(2*num_class1)];
+
+% Hyperparameters
+hiddenSizes = [128,144,176];
+learningRates = [0.95,0.9,0.8];    
+lambda_values = 0.001;          
+epochs = 1000;                   
+
+% Setup parallel pool
+if isempty(gcp('nocreate'))
+    parpool(2);  
+end
+
+% Grid search setup
+cv = cvpartition(y, 'KFold', 5);
+best_f1 = 0;
+best_params = struct();
+
+% Initialize grid result matrices
+grid_acc = zeros(length(hiddenSizes), length(learningRates));
+grid_f1 = zeros(length(hiddenSizes), length(learningRates));
+grid_recall = zeros(length(hiddenSizes), length(learningRates));
+grid_train_time = zeros(length(hiddenSizes), length(learningRates));
+grid_predict_time = zeros(length(hiddenSizes), length(learningRates));
+grid_val_loss = zeros(length(hiddenSizes), length(learningRates));
+grid_train_loss = zeros(length(hiddenSizes), length(learningRates));
+
+%% Grid Search with Cross-Validation
+for hs = 1:length(hiddenSizes)
+    for lr = 1:length(learningRates)
+        fprintf('Testing hidden size: %d, learning rate: %.2f\n', hiddenSizes(hs), learningRates(lr));
+        
+        fold_metrics = struct('f1',[], 'acc',[], 'recall',[], 'time',[],...
+            'predictTime',[], 'val_loss',[], 'train_loss',[]);
+        
+        parfor fold = 1:cv.NumTestSets
+            % Data split
+            trainIdx = training(cv, fold);
+            testIdx = test(cv, fold);
+            
+            % Train model
+            tic;
+            [model, trainLosses, valMetrics, time] = trainMLP(X(trainIdx,:), y(trainIdx),...
+                X(testIdx,:), y(testIdx), hiddenSizes(hs), learningRates(lr),...
+                epochs, lambda_values, class_weights);
+            
+            % Get best epoch metrics
+            [~, best_epoch] = max(valMetrics.F1);
+            
+            % Evaluate on test set
+            [test_acc, test_f1, test_recall, ~, ~, ~, predictTime, test_loss] = ...
+                evaluateModel(X(testIdx,:), y(testIdx), model.W1, model.B1, model.W2, model.B2);
+            
+            % Store metrics
+            fold_metrics(fold).f1 = test_f1;
+            fold_metrics(fold).acc = test_acc;
+            fold_metrics(fold).recall = test_recall;
+            fold_metrics(fold).time = sum(time);
+            fold_metrics(fold).predictTime = predictTime;
+            fold_metrics(fold).val_loss = test_loss;
+            fold_metrics(fold).train_loss = trainLosses(best_epoch);
+        end
+        
+        % Aggregate results
+        avg_f1 = mean([fold_metrics.f1]);
+        avg_acc = mean([fold_metrics.acc]);
+        avg_recall = mean([fold_metrics.recall]);
+        avg_train_time = mean([fold_metrics.time]);
+        avg_predict_time = mean([fold_metrics.predictTime]);
+        avg_val_loss = mean([fold_metrics.val_loss]);
+        avg_train_loss = mean([fold_metrics.train_loss]);
+        
+        % Store in grid matrices
+        grid_acc(hs, lr) = avg_acc;
+        grid_f1(hs, lr) = avg_f1;
+        grid_recall(hs, lr) = avg_recall;
+        grid_train_time(hs, lr) = avg_train_time;
+        grid_predict_time(hs, lr) = avg_predict_time;
+        grid_val_loss(hs, lr) = avg_val_loss;
+        grid_train_loss(hs, lr) = avg_train_loss;
+        
+        fprintf(' Average F1: %.4f, Recall: %.4f, Training Time: %.2fs\n',...
+            avg_f1, avg_recall, avg_train_time);
+        
+        % Update best parameters
+        if avg_f1 > best_f1
+            best_f1 = avg_f1;
+            best_params.hiddenSize = hiddenSizes(hs);
+            best_params.learningRate = learningRates(lr);
+        end
+    end
+end
+
+%% Visualization of Grid Search Results
+% Accuracy Heatmap
+figure;
+h = heatmap(learningRates, hiddenSizes, grid_acc);
+h.Title = 'Accuracy by Hyperparameters';
+h.XLabel = 'Learning Rate';
+h.YLabel = 'Hidden Size';
+h.Colormap = parula;
+
+% Training Time Heatmap
+figure;
+h = heatmap(learningRates, hiddenSizes, grid_train_time);
+h.Title = 'Training Time by Hyperparameters';
+h.XLabel = 'Learning Rate';
+h.YLabel = 'Hidden Size';
+h.Colormap = hot;
+
+%% Final Model Training
+fprintf('\nTraining final model with hidden size: %d, learning rate: %.2f\n',...
+        best_params.hiddenSize, best_params.learningRate);
+    
+[final_model, trainLoss, valMetrics, trainTime] = trainMLP(X, y, X, y,...
+    best_params.hiddenSize, best_params.learningRate, epochs, lambda_values, class_weights);
+
+% Final evaluation
+[final_acc, final_f1, final_recall, ~, y_pred, y_prob, final_predict_time, final_loss] = ...
+    evaluateModel(X, y, final_model.W1, final_model.B1, final_model.W2, final_model.B2);
+
+fprintf('\nFinal Performance:\n Accuracy: %.4f\n F1: %.4f\n Recall: %.4f\n Training Time: %.2fs\n Prediction Time: %.4fs\n',...
+        final_acc, final_f1, final_recall, sum(trainTime), final_predict_time);
+
+%% Visualization Section
+% ROC Curve
+figure;
+[Xroc,Yroc,Troc,AUC] = perfcurve(y, y_prob', true, 'XVals',0:0.01:1);
+plot(Xroc,Yroc,'LineWidth',2);
+title(sprintf('ROC Curve (AUC = %.3f)',AUC));
+xlabel('False Positive Rate'); 
+ylabel('True Positive Rate');
+grid on;
+
+% Confusion Matrix
+figure;
+cm = confusionmat(y, y_pred);  % Both are logical
+confusionchart(cm,'Normalization','absolute');
+title('Confusion Matrix');
+
+% Comprehensive Learning Curves
+figure;
+subplot(2,2,1);
+plot(trainLoss, 'LineWidth', 2);
+title('Training Loss');
+xlabel('Epochs'); ylabel('Loss');
+grid on;
+
+subplot(2,2,2);
+plot(valMetrics.F1, 'LineWidth', 2);
+title('Validation F1 Score');
+xlabel('Epochs'); ylabel('F1 Score');
+grid on;
+
+subplot(2,2,3);
+plot(valMetrics.Accuracy, 'LineWidth', 2);
+hold on;
+plot(valMetrics.TrainAccuracy, 'LineWidth', 2);
+title('Accuracy Progress');
+xlabel('Epochs'); ylabel('Accuracy');
+legend({'Validation','Training'},'Location','best');
+grid on;
+
+subplot(2,2,4);
+plot(valMetrics.Error, 'LineWidth', 2);
+hold on;
+plot(trainLoss, 'LineWidth', 2);
+title('Error Progress');
+xlabel('Epochs'); ylabel('Error');
+legend({'Validation','Training'},'Location','best');
+grid on;
+
+%% MLP Training Function with Enhanced Tracking
+function [model, trainLosses, valMetrics, time] = trainMLP(X_train, y_train, X_val, y_val,...
+    hiddenSize, initialLR, numEpochs, lambda, classWeights)
+    
+    % Initialize parameters
+    inputSize = size(X_train, 2);
+    [W1, B1, W2, B2] = initializeParameters(inputSize, hiddenSize);
+    
+    % Class weights vector
+    weight_vector = classWeights(1)*(y_train == 0) + classWeights(2)*(y_train == 1);
+    
+    % Metrics tracking
+    trainLosses = zeros(numEpochs, 1, 'single');
+    valMetrics = struct('Accuracy',zeros(numEpochs,1,'single'),...
+                     'F1',zeros(numEpochs,1,'single'),...
+                     'Error',zeros(numEpochs,1,'single'),...
+                     'TrainAccuracy',zeros(numEpochs,1,'single'));
+    time = zeros(numEpochs, 1);
+    best_f1 = 0;
+    patience = 100;
+    wait = 0;
+    
+    % Training loop
+    for epoch = 1:numEpochs
+        tStart = tic;
+        
+        % Forward pass
+        [hiddenOutput, outputProb] = forwardPass(X_train, W1, B1, W2, B2);
+        
+        % Loss calculation
+        data_loss = -mean( (y_train'.*log(outputProb) + (1-y_train').*log(1-outputProb) ).*weight_vector' );
+        reg_loss = 0.5*lambda*(sum(W1(:).^2) + sum(W2(:).^2));
+        total_loss = data_loss + reg_loss;
+        trainLosses(epoch) = total_loss;
+        
+        % Backward pass
+        [dW1, dB1, dW2, dB2] = backwardPass(X_train, y_train', weight_vector,...
+            hiddenOutput, outputProb, W1, B1, W2, B2, lambda);
+        
+        % Learning rate schedule
+        lr = initialLR * (0.5^(epoch >= numEpochs*0.6));
+        
+        % Update parameters
+        W1 = W1 - lr*dW1;
+        B1 = B1 - lr*dB1;
+        W2 = W2 - lr*dW2;
+        B2 = B2 - lr*dB2;
+        
+        % Training accuracy
+        [train_acc, ~] = evaluateModel(X_train, y_train, W1, B1, W2, B2);
+        valMetrics.TrainAccuracy(epoch) = train_acc;
+        
+        % Validation metrics
+        [val_acc, val_f1] = evaluateModel(X_val, y_val, W1, B1, W2, B2);
+        [~, val_prob] = forwardPass(X_val, W1, B1, W2, B2);
+        val_loss = -mean((y_val'.*log(val_prob) + (1-y_val').*log(1-val_prob)));
+        
+        valMetrics.Accuracy(epoch) = val_acc;
+        valMetrics.F1(epoch) = val_f1;
+        valMetrics.Error(epoch) = val_loss;
+        
+        % Early stopping
+        if val_f1 >= best_f1
+            best_f1 = val_f1;
+            best_W1 = W1; best_B1 = B1;
+            best_W2 = W2; best_B2 = B2;
+            wait = 0;
+        else
+            wait = wait + 1;
+            if epoch>650
+                if wait >= patience
+                    break;
+                end
+            end
+        end
+        
+        time(epoch) = toc(tStart);
+    end
+    
+    % Return best model
+    model.W1 = best_W1;
+    model.B1 = best_B1;
+    model.W2 = best_W2;
+    model.B2 = best_B2;
+    
+    % Trim unused epochs
+    trainLosses = trainLosses(1:epoch);
+    valMetrics.Accuracy = valMetrics.Accuracy(1:epoch);
+    valMetrics.F1 = valMetrics.F1(1:epoch);
+    valMetrics.Error = valMetrics.Error(1:epoch);
+    valMetrics.TrainAccuracy = valMetrics.TrainAccuracy(1:epoch);
+    time = time(1:epoch);
+end
+
+%% Helper Functions
+function [W1, B1, W2, B2] = initializeParameters(inputSize, hiddenSize)
+    W1 = randn(hiddenSize, inputSize, 'single') * sqrt(2/inputSize);
+    B1 = zeros(hiddenSize, 1, 'single');
+    W2 = randn(1, hiddenSize, 'single') * sqrt(2/hiddenSize);
+    B2 = single(0);
+end
+
+function [hiddenOutput, outputProb] = forwardPass(X, W1, B1, W2, B2)
+    hiddenInput = W1 * X' + B1;
+    hiddenOutput = max(0, hiddenInput);
+    outputInput = W2 * hiddenOutput + B2;
+    outputProb = 1 ./ (1 + exp(-outputInput));
+end
+
+function [dW1, dB1, dW2, dB2] = backwardPass(X, y, weight_vector, hiddenOutput, outputProb, W1, B1, W2, B2, lambda)
+    m = size(X, 1);
+    batch_size = 512;
+    
+    dW1 = zeros(size(W1), 'single');
+    dB1 = zeros(size(B1), 'single');
+    dW2 = zeros(size(W2), 'single');
+    dB2 = zeros(size(B2), 'single');
+    
+    for i = 1:batch_size:m
+        idx = i:min(i+batch_size-1, m);
+        X_batch = X(idx,:)';
+        y_batch = y(idx);
+        w_batch = weight_vector(idx)';
+        h_batch = hiddenOutput(:, idx);
+        p_batch = outputProb(:, idx);
+        
+        % Output layer
+        dZ2 = (p_batch - y_batch) .* w_batch / numel(idx);
+        dW2 = dW2 + dZ2 * h_batch';
+        dB2 = dB2 + sum(dZ2, 2);
+        
+        % Hidden layer
+        dHidden = W2' * dZ2;
+        dZ1 = dHidden .* (h_batch > 0);
+        dW1 = dW1 + dZ1 * X_batch';
+        dB1 = dB1 + sum(dZ1, 2);
+    end
+    
+    % Regularization
+    dW2 = dW2 + lambda*W2;
+    dW1 = dW1 + lambda*W1;
+    
+    % Normalization
+    scale_factor = m/batch_size;
+    dW1 = dW1/scale_factor;
+    dB1 = dB1/scale_factor;
+    dW2 = dW2/scale_factor;
+    dB2 = dB2/scale_factor;
+end
+
+function [accuracy, F1, recall, precision, predictions, prob, predictTime, loss] = evaluateModel(X, y, W1, B1, W2, B2)
+    batch_size = 512;
+    predictions = false(size(y));
+    prob = zeros(size(y), 'single');
+    
+    tStart = tic;
+    for i = 1:batch_size:numel(y)
+        idx = i:min(i+batch_size-1, numel(y));
+        X_batch = X(idx,:);
+        [~, probs] = forwardPass(X_batch, W1, B1, W2, B2);
+        predictions(idx) = probs' > 0.5;
+        prob(idx) = probs';
+    end
+    predictTime = toc(tStart);
+    
+    % Calculate metrics
+    accuracy = mean(predictions == y);
+    
+    TP = sum(predictions & y);
+    FP = sum(predictions & ~y);
+    FN = sum(~predictions & y);
+    
+    precision = TP / (TP + FP + eps);
+    recall = TP / (TP + FN + eps);
+    F1 = 2 * (precision * recall) / (precision + recall + eps);
+    loss = -mean(y.*log(prob+eps) + (1-y).*log(1-prob+eps));
+end
