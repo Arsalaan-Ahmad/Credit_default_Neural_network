@@ -61,8 +61,10 @@ This project compares the performance of MATLAB and Python in training a neural 
 | Average Training Time | 2s      | 7.2s    |
 | Best AUC              | 0.729   | 0.720   |
 
-![Training Time and Accuracy heatmap](Results/matlab_pyhton_acc_time_comparison)
+![Training Time and Accuracy heatmap](Results/matlab_pyhton_acc_time_comparison.png)
+
 ![MATLAB vs. Python Difference in Accuracy  and Training time](Results/matlab_vs_python.png)
+
 *Training time heatmap for Python (MATLAB showed similar trends but 70% faster).*
 
 ### Hyperparameter Impact
