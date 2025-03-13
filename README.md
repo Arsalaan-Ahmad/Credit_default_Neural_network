@@ -52,6 +52,8 @@ This project compares the performance of MATLAB and Python in training a neural 
 - **Evaluation Metric**: AUC (due to class imbalance).
 - **Class Weighting**: Penalized misclassifications of the minority class.
 - **Learning Rate Range Test**: Implemented per Smith (2017) to determine optimal rates.
+  ### Learning rate test graph
+  ![Learning rate test graph](Results/learning_rate_test_graph.png)
 
 ## Results
 ### Key Findings
