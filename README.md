@@ -79,11 +79,14 @@ This project compares the performance of MATLAB and Python in training a neural 
 *Training time heatmap for Python (MATLAB showed similar trends but 70% faster).*
 
 ### Hyperparameter Impact
+
 - **Learning Rate**: Accuracy peaked at `lr=0.18`, then declined due to local optima.
 - **Hidden Layer Size**: No significant accuracy improvement beyond 24 neurons, but training time tripled from 12 to 48 neurons.
 
 ## Usage
+
 ### Dependencies
+
 - **Python**: `numpy`, `pandas`, `scikit-learn`, `matplotlib`
 - **MATLAB**: Statistics and Machine Learning Toolbox
 
@@ -98,6 +101,7 @@ This project compares the performance of MATLAB and Python in training a neural 
 -Enhance interpretability using techniques like SHAP values.
 
 ##References
+
 -Yeh & Lien (2009) - ANN performance in credit scoring.
 
 -Smith (2017) - Cyclical Learning Rates.
