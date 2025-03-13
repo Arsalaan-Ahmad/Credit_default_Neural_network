@@ -87,23 +87,26 @@ This project compares the performance of MATLAB and Python in training a neural 
 - **Python**: `numpy`, `pandas`, `scikit-learn`, `matplotlib`
 - **MATLAB**: Statistics and Machine Learning Toolbox
 
-Conclusion & Future Work
-While MATLAB demonstrated superior efficiency, the model's high false-negative rate remains a limitation. Future improvements:
+##Conclusion & Future Work
 
-Apply SMOTE or weighted loss functions for better class balance.
+-While MATLAB demonstrated superior efficiency, the model's high false-negative rate remains a limitation. Future improvements:
 
-Explore probabilistic outputs for risk assessment.
+-Apply SMOTE or weighted loss functions for better class balance.
 
-Enhance interpretability using techniques like SHAP values.
+-Explore probabilistic outputs for risk assessment.
 
-References
-Yeh & Lien (2009) - ANN performance in credit scoring.
+-Enhance interpretability using techniques like SHAP values.
 
-Smith (2017) - Cyclical Learning Rates.
+##References
+-Yeh & Lien (2009) - ANN performance in credit scoring.
 
-Heaton (2017) - Hidden layer sizing rules.
+-Smith (2017) - Cyclical Learning Rates.
 
-For detailed code and visualizations, explore the code/ and results/ folders.
+-Heaton (2017) - Hidden layer sizing rules.
+
+-detailed reference is in the project report in docs/ folder.
+
+-For detailed code and visualizations, explore the code/ and results/ folders.
 
 
    
