@@ -10,16 +10,26 @@ This project compares the performance of MATLAB and Python in training a neural 
 - Class imbalance (77.9% non-default) was addressed using weighted loss functions and AUC evaluation.
 
 ## Repository Structure
-├── code/ # Source code
+├── code/ # Source codes
+
 │ ├── python/ # Python implementation (training, evaluation, visualization)
+
 │ └── matlab/ # MATLAB scripts (data preprocessing, model training, heatmaps)
+
 ├── data/ # Dataset and preprocessing files
+
 │ └── default of credit card clients.xls
+
 ├── docs/ # Project documentation (literature review, methodology)
+
 ├── results/ # Visualizations
+
 │ ├── accuracy_heatmap.png # Test accuracy heatmaps
+
 │ ├── training_time_heatmap.png # Training time heatmaps
+
 │ └── lr_loss_curve.png # Learning rate vs. loss curve
+
 └── README.md
 
 
@@ -35,7 +45,7 @@ This project compares the performance of MATLAB and Python in training a neural 
 - **Single hidden-layer MLP** with ReLU (hidden) and sigmoid (output) activations.
 - **Hyperparameters**:
   - Hidden layer sizes: `[12, 17, 24, 32, 48]` (based on Heaton's rules).
-  - Learning rates: `[0.001, 0.006, 0.031, 0.180, 0.990]` (geometric grid search).
+  - Learning rates: `[0.001, 0.006, 0.031, 0.180, 0.990]` (using triangular learning rate test and then geometric grid search).
   - L2 regularization (`λ = 0.001`), 500 epochs, SGD optimizer.
 
 ### Training
