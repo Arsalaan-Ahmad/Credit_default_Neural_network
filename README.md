@@ -1,6 +1,6 @@
 # Credit Card Default Prediction: MATLAB vs. Python Neural Network Comparison
 
-![MATLAB vs. Python Heatmaps](results/accuracy_heatmap.png)  
+![MATLAB vs. Python Heatmaps](results/matlab_vs_python.png)  
 *Example visualization of test accuracy across hyperparameters (see `results/` folder).*
 
 ## Overview
