@@ -24,11 +24,11 @@ This project compares the performance of MATLAB and Python in training a neural 
 
 ├── results/ # Visualizations
 
-│ ├── accuracy_heatmap.png # Test accuracy heatmaps
+│ ├── accuracy_heatmaps # Test accuracy heatmaps
 
-│ ├── training_time_heatmap.png # Training time heatmaps
+│ ├── training_time_heatmaps # Training time heatmaps
 
-│ └── lr_loss_curve.png # Learning rate vs. loss curve
+│ └── lr_loss_curves # Learning rate vs. loss curve
 
 └── README.md
 
