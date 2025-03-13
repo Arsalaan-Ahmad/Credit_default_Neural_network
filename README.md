@@ -1,7 +1,7 @@
 # Credit Card Default Prediction: MATLAB vs. Python Neural Network Comparison
 
 ![MATLAB vs. Python Heatmaps](Results/matlab_vs_python.png)  
-*Example visualization of test accuracy across hyperparameters (see `results/` folder).*
+*Example visualization of test accuracy across hyperparameters (see `Results/` folder).*
 
 ## Overview
 This project compares the performance of MATLAB and Python in training a neural network to predict credit card defaults. Using a dataset of 30,000 customers with 24 features, we implemented a single hidden-layer MLP with varying hyperparameters (hidden layer sizes and learning rates). Key findings include:
