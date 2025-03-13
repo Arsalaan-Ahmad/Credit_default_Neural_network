@@ -92,7 +92,7 @@ This project compares the performance of MATLAB and Python in training a neural 
 - **Python**: `numpy`, `pandas`, `scikit-learn`, `matplotlib`
 - **MATLAB**: Statistics and Machine Learning Toolbox
 
-##Conclusion & Future Work
+## Conclusion & Future Work
 
 -While MATLAB demonstrated superior efficiency, the model's high false-negative rate remains a limitation. Future improvements:
 
@@ -102,7 +102,7 @@ This project compares the performance of MATLAB and Python in training a neural 
 
 -Enhance interpretability using techniques like SHAP values.
 
-##References
+## References
 
 -Yeh & Lien (2009) - ANN performance in credit scoring.
 
